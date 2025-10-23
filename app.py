@@ -8,8 +8,8 @@ import sys
 
 # Configuración de página Streamlit
 st.set_page_config(
-    page_title="Detector YOLOv5 (⌐■_■)",
-    page_icon="🤖",
+    page_title="Detector YOLOv5",
+    page_icon="📷",
     layout="wide"
 )
 
@@ -60,14 +60,14 @@ def load_yolov5_model(model_path='yolov5s.pt'):
         return None
 
 # Título y descripción de la aplicación
-st.title("🤖 Máquina de Reconocimiento de Objetos")
+st.title("Máquina de Reconocimiento de Objetos ִֶ.☘︎ ݁˖")
 st.markdown("""
-Con el poder de **YOLOv5**, ¡podemos reconocer los objetos que hay en una imagen! (☉_☉)
-¿No te lo crees? Tómate una foto con un objeto en la mano y ¡mira cómo funciona!
+Con el poder de **YOLOv5**, ¡podemos reconocer los objetos que hay en una imagen!
+¿No te lo crees? Tómate una foto con un objeto en la mano, o toma una foto de tus alrededores, y ¡mira cómo funciona!
 """)
 
 # Cargar el modelo
-with st.spinner("Iniciando el motor YOLOv5... (ɔ■_■)ɔ"):
+with st.spinner("Iniciando el motor YOLOv5⊹ ࣪ ˖₊˚⊹⋆"):
     model = load_yolov5_model()
 
 # Si el modelo se cargó correctamente, configuramos los parámetros
@@ -123,7 +123,7 @@ if model:
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    st.subheader("Tu Foto (con magia ✨)")
+                    st.subheader("Tu Foto (con magia ⊹₊ ⋆)")
                     # Renderizar las detecciones en la imagen
                     results.render()
                     # ----- CORRECCIÓN AQUÍ -----
@@ -132,7 +132,7 @@ if model:
                     # ---------------------------
 
                 with col2:
-                    st.subheader("¿Qué encontramos? 🧐")
+                    st.subheader("¿Qué encontramos? (っ- ‸ - ς)")
                     # (El código original estaba incompleto aquí)
                     # Mostramos los resultados en un DataFrame de pandas
                     df_results = results.pandas().xyxy[0]
