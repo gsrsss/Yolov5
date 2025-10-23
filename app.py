@@ -111,8 +111,10 @@ if model:
                     st.error(f"Error durante la detección: {str(e)}")
                     st.stop()
 
-            # Parsear resultados
+            # --- INICIO BLOQUE TRY/EXCEPT CORREGIDO ---
+            # Asegúrate de que 'try' y 'except' estén al mismo nivel de indentación
             try:
+                # Parsear resultados
                 predictions = results.pred[0] # Esto se mantiene por si se usa luego
                 boxes = predictions[:, :4]
                 scores = predictions[:, 4]
@@ -125,10 +127,26 @@ if model:
                     st.subheader("Tu Foto (con magia ✨)")
                     # Renderizar las detecciones en la imagen
                     results.render()
-                    # Mostrar imagen con las detecciones (Corregido, solo una vez)
+                    # Mostrar imagen con las detecciones
                     st.image(cv2_img, channels='BGR', use_column_width=True)
 
                 with col2:
                     st.subheader("¿Qué encontramos? 🧐")
-                    # --- CÓDIGO AÑADIDO PARA FUNCIONALIDAD ---
-                    # (El código original estaba
+                    # (El código original estaba incompleto aquí)
+                    # Mostramos los resultados en un DataFrame de pandas
+                    df_results = results.pandas().xyxy[0]
+                    # Simplificamos la tabla para el portafolio
+                    df_results = df_results[['name', 'confidence']]
+                    df_results['confidence'] = df_results['confidence'].apply(lambda x: f"{x*100:.1f}%")
+                    df_results.rename(columns={'name': 'Objeto', 'confidence': 'Confianza'}, inplace=True)
+                    
+                    if df_results.empty:
+                        st.success("¡No se detectó nada! (O soy muy tímido) (・_・;)")
+                    else:
+                        st.dataframe(df_results, use_container_width=True, hide_index=True)
+            
+            except Exception as e:
+                st.error(f"Error al procesar los resultados: {str(e)}")
+            # --- FIN BLOQUE TRY/EXCEPT CORREGIDO ---
+else:
+    st.error("El modelo no pudo ser cargado. La aplicación no puede continuar. (T_T)")
