@@ -26,9 +26,7 @@ st.markdown("---")
 @st.cache_resource
 def load_model():
     """Carga el modelo YOLOv5 una sola vez para mejorar el rendimiento."""
-    # Descarga el modelo 'yolov5s' (small) desde los repositorios de PyTorch Hub
     try:
-        # Usamos force_reload=True si queremos asegurarnos de la descarga, pero para producción lo quitamos.
         model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
         # Ajusta el umbral de confianza para filtrar detecciones débiles (ej. 0.25)
         model.conf = 0.25 
@@ -86,9 +84,22 @@ if model:
             detections_df = results.pandas().xyxy[0]
             
             # 3. Generar la imagen con las cajas delimitadoras
-            # results.render() dibuja las cajas y devuelve la imagen como numpy array
             img_with_boxes = Image.fromarray(results.render()[0])
 
             with col2:
                 st.subheader("Detección de YOLOv5:")
-                st.image(img_
+                # LÍNEA CORREGIDA (se asegura de que el paréntesis de st.image esté cerrado)
+                st.image(img_with_boxes, caption='Objetos Reconocidos', use_column_width=True) 
+                
+            st.markdown("---")
+
+            # 4. Mostrar el resumen de las detecciones
+            st.markdown("## 📊 Informe de Objetos Encontrados:")
+            
+            if not detections_df.empty:
+                # Preparar el DataFrame para una visualización amigable
+                detections_df = detections_df[['name', 'confidence', 'xmin', 'ymin', 'xmax', 'ymax']]
+                detections_df.columns = ['Objeto Detectado', 'Nivel de Confianza', 'X_Mín', 'Y_Mín', 'X_Máx', 'Y_Máx']
+                
+                # Formato de la confianza
+                detections_df['Nivel de Confianza'] = (detections_df['Nivel de Confianza'] * 100).map('{:.2f}%'.format)
