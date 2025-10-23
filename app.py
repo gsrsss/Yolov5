@@ -1,124 +1,66 @@
+import cv2
 import streamlit as st
-from PIL import Image
-import torch
 import numpy as np
-import io
-import pandas as pd # Importar pandas para el DataFrame
+import pandas as pd
+import torch
+import os
+import sys
 
-# --- CONFIGURACIÓN DE PÁGINA Y TÍTULO PERSONALIZADO ---
+# Configuración de página Streamlit
 st.set_page_config(
-    page_title="Máquina de Reconocimiento de Objetos (YOLOv5)",
-    page_icon="🤖",
+    page_title="🤖 Object recognition machine.",
+    page_icon="📸", # Cambié el ícono a una cámara
     layout="wide"
 )
 
-# Título y descripción con un toque personal
-st.title("Object Recognition Machine! (ง ͠° ͟ل͜ ͡°)ง")
-st.markdown(
-    """
-    ¡Con el poder de **YOLOv5** podemos reconocer los objetos que hay en una imagen!
-    
-    ¿No te lo crees? ¡Sube una foto o tómate una con un objeto en la mano y mira cómo funciona!
-    """
-)
-st.markdown("---")
-
-# --- CARGA DEL MODELO YOLOv5 ---
+# Función para cargar el modelo YOLOv5 de manera compatible con versiones anteriores de PyTorch
 @st.cache_resource
-def load_model():
-    """Carga el modelo YOLOv5 una sola vez para mejorar el rendimiento."""
+def load_yolov5_model(model_path='yolov5s.pt'):
     try:
-        # Nota: Esto requiere conexión a internet para descargar el modelo si no está en caché.
-        model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
-        # Ajusta el umbral de confianza para filtrar detecciones débiles (ej. 0.25)
-        model.conf = 0.25 
-        return model
+        # Importar yolov5
+        import yolov5
+
+        # Intento de carga con manejo de compatibilidad para PyTorch
+        try:
+            # Primer método: cargar con weights_only=False si la versión lo soporta
+            model = yolov5.load(model_path, weights_only=False)
+            return model
+        except TypeError:
+            # Segundo método: si el primer método falla, intentar un enfoque más básico
+            try:
+                model = yolov5.load(model_path)
+                return model
+            except Exception as e:
+                # Si todo falla, intentar cargar el modelo con torch directamente (hub)
+                st.warning(f"⚠️ Intentando método alternativo de carga (torch.hub)...")
+
+                # Modificar sys.path temporalmente para poder importar torch correctamente (aunque hub.load ya maneja mucho)
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                if current_dir not in sys.path:
+                    sys.path.append(current_dir)
+
+                # Cargar el modelo con torch directamente
+                # Usamos map_location para asegurar que se cargue en la CPU si no hay GPU, por seguridad en entornos variados
+                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+                model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, map_location=device)
+                return model
+
     except Exception as e:
-        st.error(f"Error al cargar el modelo YOLOv5. Asegúrate de tener conexión a Internet y PyTorch instalado. Error: {e}")
+        st.error(f"❌ ¡CRASH! Error al cargar el modelo: {str(e)}")
+        st.info("""
+        **¡Ups! Parece que tuvimos problemas con YOLOv5.** (・へ・)
+        
+        **Recomendaciones para el despliegue local:**
+        1. **Instalar una versión compatible de PyTorch y YOLOv5** (por ejemplo, para compatibilidad):
+           ```
+           pip install torch==1.12.0 torchvision==0.13.0
+           pip install yolov5==7.0.9
+           ```
+        2. **Verifica la ruta** de tu archivo de modelo (si usas uno local) o asegúrate de tener **conexión a internet** para descargar el pre-entrenado.
+        """)
         return None
 
-# Cargar el modelo
-model = load_model()
-
-if model:
-    # --- INTERFAZ DE USUARIO PARA SUBIR IMAGEN ---
-    
-    # 1. Subir un archivo
-    uploaded_file = st.file_uploader(
-        "Sube una imagen (JPEG, PNG) para detectar objetos:", 
-        type=['png', 'jpg', 'jpeg']
-    )
-    
-    # 2. Capturar desde la cámara
-    camera_image = st.camera_input("...o utiliza tu cámara para una detección en tiempo real 📸")
-    
-    # Determinar la fuente de la imagen
-    if uploaded_file is not None:
-        image_source = uploaded_file
-        st.sidebar.info("Archivo cargado correctamente. (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧")
-    elif camera_image is not None:
-        image_source = camera_image
-        st.sidebar.info("Imagen capturada desde la cámara. ✨")
-    else:
-        # Mensaje de bienvenida/espera si no hay imagen
-        st.info("Esperando tu imagen. ¡Sube o captura para empezar la magia! 🪄")
-        image_source = None
-
-    st.markdown("---")
-
-    # --- PROCESAMIENTO Y DETECCIÓN DE OBJETOS ---
-    if image_source is not None:
-        try:
-            # 1. Preparar la imagen
-            image = Image.open(image_source)
-            
-            st.markdown("## 🔎 Resultado de la Detección")
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.subheader("Imagen Original:")
-                st.image(image, caption='Imagen de entrada', use_column_width=True)
-            
-            # 2. Realizar la inferencia con YOLOv5
-            results = model(image) 
-            
-            # Obtener las detecciones en formato DataFrame de pandas
-            detections_df = results.pandas().xyxy[0]
-            
-            # 3. Generar la imagen con las cajas delimitadoras
-            img_with_boxes = Image.fromarray(results.render()[0])
-
-            with col2:
-                st.subheader("Detección de YOLOv5:")
-                st.image(img_with_boxes, caption='Objetos Reconocidos', use_column_width=True) 
-                
-            st.markdown("---")
-
-            # 4. Mostrar el resumen de las detecciones
-            st.markdown("## 📊 Informe de Objetos Encontrados:")
-            
-            if not detections_df.empty:
-                # ----------------------------------------------------
-                # BLOQUE CRÍTICO DE INDENTACIÓN (Líneas 100-110)
-                # ----------------------------------------------------
-                
-                # Preparar el DataFrame para una visualización amigable
-                detections_df = detections_df[['name', 'confidence', 'xmin', 'ymin', 'xmax', 'ymax']]
-                detections_df.columns = ['Objeto Detectado', 'Nivel de Confianza', 'X_Mín', 'Y_Mín', 'X_Máx', 'Y_Máx']
-                
-                # Formato de la confianza (Esta es la línea 105 donde se detectó el error)
-                detections_df['Nivel de Confianza'] = (detections_df['Nivel de Confianza'] * 100).map('{:.2f}%'.format)
-                
-                st.dataframe(detections_df) 
-                
-                st.success(f"¡YOLOv5 ha detectado **{len(detections_df)}** objeto(s) con éxito! (ɔ◔‿◔)ɔ ♥")
-            else:
-                st.warning("No se detectaron objetos con la suficiente confianza. Prueba con una imagen más clara o con objetos comunes. (｡•́︿•̀｡)")
-
-        except Exception as e:
-            # Captura cualquier error durante el procesamiento de la imagen o la detección
-            st.error(f"¡Ups! Ocurrió un error inesperado durante el procesamiento. Por favor, revisa el formato de la imagen. Error detallado: {e}")
-
-else:
-    # Mensaje si el modelo no pudo cargar
-    st.error("⚠️ La Máquina de Reconocimiento no pudo cargar el modelo. Por favor, contacta al desarrollador. 🤖")
+# Título y descripción de la aplicación con el nuevo estilo
+st.title("🤖 Object recognition machine.")
+st.markdown("""
+¡Con el poder de **YOLOv5** podemos reconocer los objetos que hay en una imagen!
