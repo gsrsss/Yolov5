@@ -28,8 +28,9 @@ def load_model():
     """Carga el modelo YOLOv5 una sola vez para mejorar el rendimiento."""
     # Descarga el modelo 'yolov5s' (small) desde los repositorios de PyTorch Hub
     try:
+        # Usamos force_reload=True si queremos asegurarnos de la descarga, pero para producción lo quitamos.
         model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
-        # Ajusta el umbral de confianza a un valor razonable (ej. 0.25)
+        # Ajusta el umbral de confianza para filtrar detecciones débiles (ej. 0.25)
         model.conf = 0.25 
         return model
     except Exception as e:
@@ -48,10 +49,10 @@ if model:
         type=['png', 'jpg', 'jpeg']
     )
     
-    # 2. Capturar desde la cámara (solo en entornos que lo soporten)
+    # 2. Capturar desde la cámara
     camera_image = st.camera_input("...o utiliza tu cámara para una detección en tiempo real 📸")
     
-    # Selecciona la fuente de la imagen
+    # Determinar la fuente de la imagen
     if uploaded_file is not None:
         image_source = uploaded_file
         st.sidebar.info("Archivo cargado correctamente. (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧")
@@ -79,31 +80,15 @@ if model:
                 st.image(image, caption='Imagen de entrada', use_column_width=True)
             
             # 2. Realizar la inferencia con YOLOv5
-            # 'image' ya es un objeto PIL.Image, que YOLOv5 puede manejar directamente.
             results = model(image) 
             
-            # results.pandas().xyxy[0] contiene las detecciones en un DataFrame de pandas
+            # Obtener las detecciones en formato DataFrame de pandas
             detections_df = results.pandas().xyxy[0]
             
             # 3. Generar la imagen con las cajas delimitadoras
-            # results.render() devuelve la imagen con las cajas dibujadas
+            # results.render() dibuja las cajas y devuelve la imagen como numpy array
             img_with_boxes = Image.fromarray(results.render()[0])
 
             with col2:
                 st.subheader("Detección de YOLOv5:")
-                st.image(img_with_boxes, caption='Objetos Reconocidos', use_column_width=True)
-                
-            st.markdown("---")
-
-            # 4. Mostrar el resumen de las detecciones
-            st.markdown("## 📊 Objetos Encontrados:")
-            
-            if not detections_df.empty:
-                # Renombrar columnas para un toque más amigable
-                detections_df = detections_df[['name', 'confidence', 'xmin', 'ymin', 'xmax', 'ymax']]
-                detections_df.columns = ['Objeto', 'Confianza (%)', 'X_Min', 'Y_Min', 'X_Max', 'Y_Max']
-                
-                # Formato de la confianza
-                detections_df['Confianza (%)'] = (detections_df['Confianza (%)'] * 100).map('{:.2f}%'.format)
-                
-                st.dataframe(detections_df)
+                st.image(img_
