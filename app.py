@@ -3,6 +3,7 @@ from PIL import Image
 import torch
 import numpy as np
 import io
+import pandas as pd # Importar pandas para el DataFrame
 
 # --- CONFIGURACIÓN DE PÁGINA Y TÍTULO PERSONALIZADO ---
 st.set_page_config(
@@ -27,6 +28,7 @@ st.markdown("---")
 def load_model():
     """Carga el modelo YOLOv5 una sola vez para mejorar el rendimiento."""
     try:
+        # Nota: Esto requiere conexión a internet para descargar el modelo si no está en caché.
         model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
         # Ajusta el umbral de confianza para filtrar detecciones débiles (ej. 0.25)
         model.conf = 0.25 
@@ -96,6 +98,27 @@ if model:
             st.markdown("## 📊 Informe de Objetos Encontrados:")
             
             if not detections_df.empty:
+                # ----------------------------------------------------
+                # BLOQUE CRÍTICO DE INDENTACIÓN (Líneas 100-110)
+                # ----------------------------------------------------
+                
                 # Preparar el DataFrame para una visualización amigable
                 detections_df = detections_df[['name', 'confidence', 'xmin', 'ymin', 'xmax', 'ymax']]
-                detections_df.columns = ['Objeto Detectado',
+                detections_df.columns = ['Objeto Detectado', 'Nivel de Confianza', 'X_Mín', 'Y_Mín', 'X_Máx', 'Y_Máx']
+                
+                # Formato de la confianza (Esta es la línea 105 donde se detectó el error)
+                detections_df['Nivel de Confianza'] = (detections_df['Nivel de Confianza'] * 100).map('{:.2f}%'.format)
+                
+                st.dataframe(detections_df) 
+                
+                st.success(f"¡YOLOv5 ha detectado **{len(detections_df)}** objeto(s) con éxito! (ɔ◔‿◔)ɔ ♥")
+            else:
+                st.warning("No se detectaron objetos con la suficiente confianza. Prueba con una imagen más clara o con objetos comunes. (｡•́︿•̀｡)")
+
+        except Exception as e:
+            # Captura cualquier error durante el procesamiento de la imagen o la detección
+            st.error(f"¡Ups! Ocurrió un error inesperado durante el procesamiento. Por favor, revisa el formato de la imagen. Error detallado: {e}")
+
+else:
+    # Mensaje si el modelo no pudo cargar
+    st.error("⚠️ La Máquina de Reconocimiento no pudo cargar el modelo. Por favor, contacta al desarrollador. 🤖")
