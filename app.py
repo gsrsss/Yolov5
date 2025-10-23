@@ -88,7 +88,6 @@ if model:
 
             with col2:
                 st.subheader("Detección de YOLOv5:")
-                # LÍNEA CORREGIDA (se asegura de que el paréntesis de st.image esté cerrado)
                 st.image(img_with_boxes, caption='Objetos Reconocidos', use_column_width=True) 
                 
             st.markdown("---")
@@ -99,7 +98,4 @@ if model:
             if not detections_df.empty:
                 # Preparar el DataFrame para una visualización amigable
                 detections_df = detections_df[['name', 'confidence', 'xmin', 'ymin', 'xmax', 'ymax']]
-                detections_df.columns = ['Objeto Detectado', 'Nivel de Confianza', 'X_Mín', 'Y_Mín', 'X_Máx', 'Y_Máx']
-                
-                # Formato de la confianza
-                detections_df['Nivel de Confianza'] = (detections_df['Nivel de Confianza'] * 100).map('{:.2f}%'.format)
+                detections_df.columns = ['Objeto Detectado',
