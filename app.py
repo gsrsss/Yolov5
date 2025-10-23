@@ -111,7 +111,6 @@ if model:
                     st.error(f"Error durante la detección: {str(e)}")
                     st.stop()
 
-            # --- INICIO BLOQUE TRY/EXCEPT CORREGIDO ---
             # Asegúrate de que 'try' y 'except' estén al mismo nivel de indentación
             try:
                 # Parsear resultados
@@ -127,8 +126,10 @@ if model:
                     st.subheader("Tu Foto (con magia ✨)")
                     # Renderizar las detecciones en la imagen
                     results.render()
-                    # Mostrar imagen con las detecciones
-                    st.image(cv2_img, channels='BGR', use_column_width=True)
+                    # ----- CORRECCIÓN AQUÍ -----
+                    # Cambiamos use_column_width por use_container_width
+                    st.image(cv2_img, channels='BGR', use_container_width=True)
+                    # ---------------------------
 
                 with col2:
                     st.subheader("¿Qué encontramos? 🧐")
@@ -147,6 +148,5 @@ if model:
             
             except Exception as e:
                 st.error(f"Error al procesar los resultados: {str(e)}")
-            # --- FIN BLOQUE TRY/EXCEPT CORREGIDO ---
 else:
     st.error("El modelo no pudo ser cargado. La aplicación no puede continuar. (T_T)")
